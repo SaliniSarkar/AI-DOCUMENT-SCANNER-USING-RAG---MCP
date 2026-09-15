@@ -1,4 +1,5 @@
-from langchain_google_genai import ChatGoogleGenerativeAI
+from google import genai
+from google.genai import types
 
 from config import GEMINI_API_KEY, GEMINI_CHAT_MODEL
 
@@ -6,33 +7,14 @@ from config import GEMINI_API_KEY, GEMINI_CHAT_MODEL
 FALLBACK = "SORRY 🙂 I couldn't find that information in the uploaded document."
 
 
-def _content_to_text(content) -> str:
-    if isinstance(content, str):
-        return content
-
-    if isinstance(content, list):
-        parts = []
-        for block in content:
-            if isinstance(block, dict):
-                text = block.get("text")
-                if text:
-                    parts.append(text)
-            elif isinstance(block, str):
-                parts.append(block)
-        return "\n".join(parts)
-
-    return str(content)
+def _client():
+    if not GEMINI_API_KEY:
+        raise ValueError("GEMINI_API_KEY is not configured.")
+    return genai.Client(api_key=GEMINI_API_KEY)
 
 
 def ask_gemini(context: str, question: str) -> str:
-    if not GEMINI_API_KEY:
-        raise ValueError("GEMINI_API_KEY is not configured.")
-
-    llm = ChatGoogleGenerativeAI(
-        google_api_key=GEMINI_API_KEY,
-        model=GEMINI_CHAT_MODEL,
-        temperature=0,
-    )
+    client = _client()
 
     prompt = f"""
 You are a helpful document assistant.
@@ -49,5 +31,16 @@ User question:
 {question}
 """
 
-    response = llm.invoke(prompt)
-    return _content_to_text(response.content).strip()
+    response = client.models.generate_content(
+        model=GEMINI_CHAT_MODEL,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            temperature=0,
+            max_output_tokens=2048,
+        ),
+    )
+
+    text = getattr(response, "text", None)
+    if not text:
+        return FALLBACK
+    return text.strip()
