@@ -54,12 +54,6 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
 
-    st.divider()
-    st.markdown("**Deployment note**")
-    st.caption(
-        "API keys are read from Streamlit Secrets or environment variables. "
-        "They are never stored in the project."
-    )
 
 # ---------------- API-key validation ----------------
 if not get_api_key(model):
